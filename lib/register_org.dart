@@ -22,6 +22,41 @@ class _OrganizerRegisterPageState extends State<OrganizerRegisterPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController orgnameController = TextEditingController();
 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  void registerOrganizer() async {
+    String email = emailController.text;
+    String password = passwordController.text;
+    String name = nameController.text;
+    String orgname = orgnameController.text;
+    bool org = true;
+
+    try {
+      // Create a new user with the provided email and password
+      UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Add the user's data to Firestore
+      await _firestore
+          .collection('organizer')
+          .doc(userCredential.user!.uid)
+          .set({
+        'name': name,
+        'email': email,
+        'orgname': orgname,
+        'org': org,
+      });
+
+      // Navigate to the next page or show a success message
+    } catch (e) {
+      // Handle the error
+      print(e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,6 +92,7 @@ class _OrganizerRegisterPageState extends State<OrganizerRegisterPage> {
                         child: Padding(
                           padding: const EdgeInsets.only(left: 20.0),
                           child: TextField(
+                            controller: nameController,
                             decoration: InputDecoration(
                               hintText: 'Name',
                               border: InputBorder.none,
@@ -76,6 +112,7 @@ class _OrganizerRegisterPageState extends State<OrganizerRegisterPage> {
                         child: Padding(
                           padding: const EdgeInsets.only(left: 20.0),
                           child: TextField(
+                            controller: orgnameController,
                             decoration: InputDecoration(
                               hintText: 'Organization Name',
                               border: InputBorder.none,
@@ -95,6 +132,7 @@ class _OrganizerRegisterPageState extends State<OrganizerRegisterPage> {
                         child: Padding(
                           padding: const EdgeInsets.only(left: 20.0),
                           child: TextField(
+                            controller: emailController,
                             decoration: InputDecoration(
                               hintText: 'Email',
                               border: InputBorder.none,
@@ -114,6 +152,7 @@ class _OrganizerRegisterPageState extends State<OrganizerRegisterPage> {
                         child: Padding(
                           padding: const EdgeInsets.only(left: 20.0),
                           child: TextField(
+                            controller: passwordController,
                             obscureText: true,
                             decoration: InputDecoration(
                               hintText: 'Password',
@@ -152,8 +191,14 @@ class _OrganizerRegisterPageState extends State<OrganizerRegisterPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushReplacement(
+                          onTap: () async {
+                            registerOrganizer();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Registration successful!'),
+                              ),
+                            );
+                            await Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
                                   builder: (context) => LoginPage()),

@@ -1,7 +1,9 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables, prefer_const_constructors
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:relevents/dummy_signedin.dart';
+import 'package:relevents/org_dummy.dart';
 import 'package:relevents/register_choose.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -19,17 +21,37 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> signInUser() async {
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text,
         password: passwordController.text,
       );
-      // Navigate to the next page if sign in was successful
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                DummySignedInPage(user: FirebaseAuth.instance.currentUser!)),
-      );
+
+      DocumentSnapshot orgDoc = await FirebaseFirestore.instance
+          .collection('organizer')
+          .doc(userCredential.user!.uid)
+          .get();
+
+      if (orgDoc.exists) {
+        // The user is an organizer
+        // Map<String, dynamic> orgData = orgDoc.data() as Map<String, dynamic>;
+
+        // Navigate to the organizer welcome page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => org_dummy(user: userCredential.user!)),
+        );
+      } else {
+        // The user is not an organizer
+        // Navigate to the regular welcome page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  DummySignedInPage(user: userCredential.user!)),
+        );
+      }
     } on FirebaseAuthException catch (e) {
       setState(() {
         if (e.code == 'user-not-found') {

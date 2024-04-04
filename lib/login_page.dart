@@ -6,6 +6,7 @@ import 'package:relevents/dummy_signedin.dart';
 import 'package:relevents/org_dummy.dart';
 import 'package:relevents/register_choose.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:relevents/student_homepage.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -49,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
           context,
           MaterialPageRoute(
               builder: (context) =>
-                  DummySignedInPage(user: userCredential.user!)),
+                  StudentHomePage(user: userCredential.user!)),
         );
       }
     } on FirebaseAuthException catch (e) {

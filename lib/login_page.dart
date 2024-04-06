@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:relevents/dummy_signedin.dart';
 import 'package:relevents/org_dummy.dart';
+import 'package:relevents/org_homepage.dart';
 import 'package:relevents/register_choose.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:relevents/student_homepage.dart';
@@ -41,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (context) => org_dummy(user: userCredential.user!)),
+              builder: (context) => OrgHomePage(user: userCredential.user!)),
         );
       } else {
         // The user is not an organizer

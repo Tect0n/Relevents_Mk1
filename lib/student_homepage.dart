@@ -633,6 +633,14 @@ class ProjectDetailsScreen extends StatelessWidget {
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
+                          project.selectedStudentType.toString(),
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
                           project.contactEmailController.text,
                           style: TextStyle(fontSize: 16),
                         ),

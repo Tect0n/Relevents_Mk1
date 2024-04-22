@@ -8,6 +8,7 @@ import 'package:relevents/org_homepage.dart';
 import 'package:relevents/register_choose.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:relevents/student_homepage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -17,9 +18,34 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   String email = '';
   String password = '';
-  String errorMessage = '';
+  String errorMessage =
+      'Login failed! Please check your details and try again.';
+  bool rememberMe = false;
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Check if user details are remembered
+    checkRememberedUser();
+  }
+
+  // Function to check if user details are remembered
+  Future<void> checkRememberedUser() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      rememberMe = prefs.getBool('rememberMe') ?? false;
+      if (rememberMe) {
+        email = prefs.getString('email') ?? '';
+        password = prefs.getString('password') ?? '';
+        emailController.text = email;
+        passwordController.text = password;
+      }
+    });
+  }
+
+  // Function to sign in the user
 
   Future<void> signInUser() async {
     try {
@@ -28,6 +54,20 @@ class _LoginPageState extends State<LoginPage> {
         email: emailController.text,
         password: passwordController.text,
       );
+
+      // Remember user details if "Remember Me" is checked
+      if (rememberMe) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('email', emailController.text);
+        await prefs.setString('password', passwordController.text);
+        await prefs.setBool('rememberMe', true);
+      } else {
+        // Clear remembered user details if "Remember Me" is unchecked
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.remove('email');
+        await prefs.remove('password');
+        await prefs.remove('rememberMe');
+      }
 
       DocumentSnapshot orgDoc = await FirebaseFirestore.instance
           .collection('organizer')
@@ -55,17 +95,24 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      setState(() {
-        if (e.code == 'user-not-found') {
-          errorMessage = 'No user found for that email.';
-        } else if (e.code == 'wrong-password') {
-          errorMessage = 'Wrong password provided for that user.';
-        }
-      });
+      if (e.code == 'user-not-found') {
+        errorMessage = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        errorMessage = 'Wrong password provided for that user.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
     } catch (e) {
-      setState(() {
-        errorMessage = 'An unknown error occurred.';
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('An unknown error occurred.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -156,16 +203,26 @@ class _LoginPageState extends State<LoginPage> {
                       )),
                 ),
 
-                SizedBox(height: 25),
+                SizedBox(height: 10),
 
-                // Error message
-                Text(
-                  errorMessage,
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 15,
-                  ),
+                // Remember me
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Checkbox(
+                      value: rememberMe,
+                      activeColor: Colors.blue, // Set the color to blue
+                      onChanged: (bool? value) {
+                        setState(() {
+                          rememberMe = value!;
+                        });
+                      },
+                    ),
+                    Text('Remember me'),
+                  ],
                 ),
+
+                SizedBox(height: 5),
 
                 // login button
                 Padding(

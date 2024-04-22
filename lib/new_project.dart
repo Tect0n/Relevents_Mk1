@@ -188,6 +188,8 @@ class _NewProjectState extends State<NewProject> {
                   ),
                 ),
 
+                SizedBox(height: 20),
+
                 if (startTimestamp != null && endTimestamp != null)
                   Text(
                     'Selected Dates: ${DateFormat('dd/MM/yy').format(startTimestamp!.toDate())} - ${DateFormat('dd/MM/yy').format(endTimestamp!.toDate())}',

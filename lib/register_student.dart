@@ -15,14 +15,14 @@ class _StudentRegisterPageState extends State<StudentRegisterPage> {
   String password = '';
   String confirmPassword = '';
   String name = '';
-  String course = 'Computing';
+  String studentType = 'Computing';
   String graduationYear = '2025';
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
 
-  List<String> courses = ['Computing', 'Business', 'Science', 'Art'];
+  List<String> studentTypes = ['Computing', 'Business', 'Science', 'Art'];
   List<String> graduationYears = ['2022', '2023', '2024', '2025'];
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -44,7 +44,7 @@ class _StudentRegisterPageState extends State<StudentRegisterPage> {
       await _firestore.collection('student').doc(userCredential.user!.uid).set({
         'name': name,
         'email': email,
-        'course': course,
+        'studentType': studentType,
         'graduationYear': graduationYear,
       });
 
@@ -112,13 +112,13 @@ class _StudentRegisterPageState extends State<StudentRegisterPage> {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: DropdownButton<String>(
-                              value: course,
+                              value: studentType,
                               onChanged: (String? newValue) {
                                 setState(() {
-                                  course = newValue ?? '';
+                                  studentType = newValue ?? '';
                                 });
                               },
-                              items: courses.map<DropdownMenuItem<String>>(
+                              items: studentTypes.map<DropdownMenuItem<String>>(
                                   (String value) {
                                 return DropdownMenuItem<String>(
                                   value: value,

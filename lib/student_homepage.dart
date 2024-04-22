@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart';
 import 'package:relevents/new_project.dart';
 import 'package:relevents/new_survey.dart';
 import 'package:relevents/project.dart';
@@ -64,11 +65,27 @@ class _StudentHomePageState extends State<StudentHomePage> {
     });
   }
 
+/*
+  // Method to fetch projects based on student type
+  Future<List<Project>> fetchProjectsByStudentType(String studentType) async {
+    // Get a reference to the Firestore collection
+    final CollectionReference projects =
+        FirebaseFirestore.instance.collection('projects');
+
+    // Query the collection for projects of the same student type
+    final QuerySnapshot querySnapshot =
+        await projects.where('StudentType', isEqualTo: studentType).get();
+
+    // Map the documents to Project objects and return them as a list
+    return querySnapshot.docs.map((doc) => Project.fromFirestore(doc)).toList();
+  }
+*/
+
   @override
   Widget build(BuildContext context) {
     // Define your screens here with widget.user passed to HomeScreen
     final _screens = [
-      HomeScreen(user: widget.user),
+      HomeScreen(user: widget.user, userData: _userData),
       CalendarScreen(),
       AddScreen(user: widget.user),
       AccountScreen(user: widget.user, userData: _userData),
@@ -128,68 +145,83 @@ class _StudentHomePageState extends State<StudentHomePage> {
 
 class HomeScreen extends StatelessWidget {
   final User user;
+  final Map<String, dynamic> userData;
 
-  HomeScreen({required this.user});
+  HomeScreen({required this.user, required this.userData});
 
   @override
   Widget build(BuildContext context) {
+    // Method to fetch projects based on student type
+    Future<List<Project>> fetchProjectsByStudentType(String studentType) async {
+      // Get a reference to the Firestore collection
+      final CollectionReference projects =
+          FirebaseFirestore.instance.collection('projects');
+
+      // Query the collection for projects of the same student type
+      final QuerySnapshot querySnapshot =
+          await projects.where('StudentType', isEqualTo: studentType).get();
+
+      // Map the documents to Project objects and return them as a list
+      return querySnapshot.docs
+          .map((doc) => Project.fromFirestore(doc))
+          .toList();
+    }
+
     return Scaffold(
+      // App bar
 
-        // App bar
-
-        // Body of the page
-        body: Column(
-      children: <Widget>[
-        SizedBox(height: 20),
-        Flexible(
-          child: Container(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  SafeArea(
-                    child: Padding(
-                      padding: EdgeInsets.only(left: 10.0),
-                      child: Text(
-                        'Events for you :',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+      // Body of the page
+      body: Column(
+        children: <Widget>[
+          SizedBox(height: 20),
+          Flexible(
+            child: Container(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SafeArea(
+                      child: Padding(
+                        padding: EdgeInsets.only(left: 10.0),
+                        child: Text(
+                          'Events for you :',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 15),
-                  CarouselSlider(
-                    options: CarouselOptions(
-                        height: MediaQuery.of(context).size.height * 0.2),
-                    items: [1, 2, 3, 4, 5].map((i) {
-                      return Builder(
-                        builder: (BuildContext context) {
-                          return Container(
-                              width: MediaQuery.of(context).size.width,
-                              margin: EdgeInsets.symmetric(horizontal: 5.0),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'Event $i',
-                                  style: TextStyle(fontSize: 16.0),
+                    SizedBox(height: 15),
+                    CarouselSlider(
+                      options: CarouselOptions(
+                          height: MediaQuery.of(context).size.height * 0.2),
+                      items: [1, 2, 3, 4, 5].map((i) {
+                        return Builder(
+                          builder: (BuildContext context) {
+                            return Container(
+                                width: MediaQuery.of(context).size.width,
+                                margin: EdgeInsets.symmetric(horizontal: 5.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(15.0),
                                 ),
-                              ));
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ]),
+                                child: Center(
+                                  child: Text(
+                                    'Event $i',
+                                    style: TextStyle(fontSize: 16.0),
+                                  ),
+                                ));
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ]),
+            ),
           ),
-        ),
 
-        // Project carousel
-        Flexible(
-          child: Container(
-            child: Column(
+          // Project carousel
+          Flexible(
+            child: Container(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  SizedBox(height: 15),
                   SafeArea(
                     child: Padding(
                       padding: EdgeInsets.only(left: 10.0),
@@ -200,42 +232,85 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 15),
-                  CarouselSlider(
-                    options: CarouselOptions(
-                        height: MediaQuery.of(context).size.height * 0.2),
-                    items: [1, 2, 3, 4, 5].map((i) {
-                      return Builder(
-                        builder: (BuildContext context) {
-                          return Container(
-                              width: MediaQuery.of(context).size.width * 0.5,
-                              margin: EdgeInsets.symmetric(horizontal: 5.0),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'Project $i',
-                                  style: TextStyle(fontSize: 16.0),
-                                ),
-                              ));
-                        },
-                      );
-                    }).toList(),
+                  FutureBuilder<List<Project>>(
+                    future: fetchProjectsByStudentType(
+                        userData['studentType'] ??
+                            'Art'), // TODO: Bug here, studentType is null
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      } else {
+                        final List<Project> projects = snapshot.data!;
+                        return CarouselSlider(
+                          options: CarouselOptions(
+                              height: MediaQuery.of(context).size.height * 0.2),
+                          items: projects.map((project) {
+                            return Builder(
+                              builder: (BuildContext context) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      builder: (context) =>
+                                          ProjectDetailsScreen(
+                                              project: project),
+                                    );
+                                  },
+                                  child: Container(
+                                    width:
+                                        MediaQuery.of(context).size.width * 0.5,
+                                    margin:
+                                        EdgeInsets.symmetric(horizontal: 5.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors
+                                          .white, // Change the background color to white
+                                      borderRadius: BorderRadius.circular(15.0),
+                                      border: Border.all(
+                                          color: Colors.blue,
+                                          width: 2), // Add a blue border
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          project.projectNameController.text,
+                                          style: TextStyle(
+                                              fontSize: 16.0,
+                                              fontWeight: FontWeight
+                                                  .bold), // Make the title bold
+                                        ),
+                                        SizedBox(height: 15),
+                                        Text(
+                                          '${DateFormat('dd/MM/yy').format(project.startTimestamp!.toDate())} - ${DateFormat('dd/MM/yy').format(project.endTimestamp!.toDate())}', // Show the project dates
+                                          style: TextStyle(fontSize: 14.0),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          }).toList(),
+                        );
+                      }
+                    },
                   ),
-                ]),
+                ],
+              ),
+            ),
           ),
-        ),
 
-        //SizedBox(height: 30),
-
-        // Survey carousel
-        Flexible(
-          child: Container(
-            child: Column(
+          // Survey carousel
+          Flexible(
+            child: Container(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  SizedBox(height: 50),
+                  SizedBox(height: 30),
                   Padding(
                     padding: EdgeInsets.only(left: 10.0),
                     child: Text(
@@ -246,7 +321,7 @@ class HomeScreen extends StatelessWidget {
                   SizedBox(height: 15),
                   CarouselSlider(
                     options: CarouselOptions(
-                        height: MediaQuery.of(context).size.height * 0.1),
+                        height: MediaQuery.of(context).size.height * 0.15),
                     items: [1, 2, 3, 4, 5].map((i) {
                       return Builder(
                         builder: (BuildContext context) {
@@ -267,11 +342,13 @@ class HomeScreen extends StatelessWidget {
                       );
                     }).toList(),
                   ),
-                ]),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
-    ));
+        ],
+      ),
+    );
   }
 }
 
@@ -568,25 +645,25 @@ class _AddJobPopupCard extends StatelessWidget {
   }
 }
 
+// Project Card Details
 class ProjectDetailsScreen extends StatelessWidget {
   final Project project;
+  final User currentUser = FirebaseAuth.instance.currentUser!;
 
-  const ProjectDetailsScreen({Key? key, required this.project})
-      : super(key: key);
+  ProjectDetailsScreen({Key? key, required this.project}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue, // Set background to transparent
+      backgroundColor: Colors.blue,
       body: Stack(
         children: [
           GestureDetector(
-            // Close the modal when tapping outside the content
             onTap: () {
               Navigator.of(context).pop();
             },
             child: Container(
-              color: Colors.black.withOpacity(0.4), // Semi-transparent overlay
+              color: Colors.black.withOpacity(0.4),
             ),
           ),
           Center(
@@ -598,7 +675,8 @@ class ProjectDetailsScreen extends StatelessWidget {
               child: Material(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: AnimatedContainer(
                   duration: Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
@@ -608,44 +686,123 @@ class ProjectDetailsScreen extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                  child: Stack(
                     children: [
-                      SizedBox(height: 16),
-                      Center(
-                        child: Text(
-                          project.projectNameController.text,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(height: 16),
+                          Center(
+                            child: Text(
+                              project.projectNameController.text,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+                          SizedBox(height: 16),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              project.projectDescriptionController.text,
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: RichText(
+                              text: TextSpan(
+                                style: DefaultTextStyle.of(context).style,
+                                children: <TextSpan>[
+                                  TextSpan(
+                                    text: 'Student Type: ',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        '${project.selectedStudentType.toString()}',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: RichText(
+                              text: TextSpan(
+                                style: DefaultTextStyle.of(context).style,
+                                children: <TextSpan>[
+                                  TextSpan(
+                                    text: 'Date: ',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        '${DateFormat('dd/MM/yy').format(project.startTimestamp!.toDate())} - ${DateFormat('dd/MM/yy').format(project.endTimestamp!.toDate())}',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: RichText(
+                              text: TextSpan(
+                                style: DefaultTextStyle.of(context).style,
+                                children: <TextSpan>[
+                                  TextSpan(
+                                    text: 'Contact Email: ',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        '${project.contactEmailController.text}',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                        ],
                       ),
-                      SizedBox(height: 16),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          project.projectDescriptionController.text,
-                          style: TextStyle(fontSize: 16),
-                        ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: currentUser.email == project.lead
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.delete,
+                                  color: Colors.red, // Set the color to red
+                                ),
+                                onPressed: () async {
+                                  // Get a reference to the Firestore instance
+                                  final FirebaseFirestore firestore =
+                                      FirebaseFirestore.instance;
+
+                                  // Delete the document from the 'projects' collection
+                                  await firestore
+                                      .collection('projects')
+                                      .doc(project.PID.toString())
+                                      .delete();
+
+                                  // Pop the current screen
+                                  Navigator.of(context).pop();
+                                },
+                              )
+                            : Container(), // Render an empty container when the user is not the project lead
                       ),
-                      SizedBox(height: 16),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          project.selectedStudentType.toString(),
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          project.contactEmailController.text,
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      SizedBox(height: 16),
                     ],
                   ),
                 ),

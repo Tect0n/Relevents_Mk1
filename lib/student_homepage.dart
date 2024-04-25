@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:relevents/new_project.dart';
 import 'package:relevents/new_survey.dart';
 import 'package:relevents/project.dart';
+import 'package:relevents/survey.dart';
 //import 'package:popup_card/styles.dart';
 
 import 'CustomRectTween.dart';
@@ -167,6 +168,22 @@ class HomeScreen extends StatelessWidget {
           .toList();
     }
 
+    // Method to fetch projects based on student type
+    Future<List<Survey>> fetchSurveysByStudentType(String studentType) async {
+      // Get a reference to the Firestore collection
+      final CollectionReference surveys =
+          FirebaseFirestore.instance.collection('surveys');
+
+      // Query the collection for projects of the same student type
+      final QuerySnapshot querySnapshot =
+          await surveys.where('StudentType', isEqualTo: studentType).get();
+
+      // Map the documents to Project objects and return them as a list
+      return querySnapshot.docs
+          .map((doc) => Survey.fromFirestore(doc))
+          .toList();
+    }
+
     return Scaffold(
       // App bar
 
@@ -310,37 +327,80 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  SizedBox(height: 30),
-                  Padding(
-                    padding: EdgeInsets.only(left: 10.0),
-                    child: Text(
-                      'Surveys for you :',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                  SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 10.0),
+                      child: Text(
+                        'Surveys for you :',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                   SizedBox(height: 15),
-                  CarouselSlider(
-                    options: CarouselOptions(
-                        height: MediaQuery.of(context).size.height * 0.15),
-                    items: [1, 2, 3, 4, 5].map((i) {
-                      return Builder(
-                        builder: (BuildContext context) {
-                          return Container(
-                              width: MediaQuery.of(context).size.width,
-                              margin: EdgeInsets.symmetric(horizontal: 5.0),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'Survey $i',
-                                  style: TextStyle(fontSize: 16.0),
-                                ),
-                              ));
-                        },
-                      );
-                    }).toList(),
+                  FutureBuilder<List<Survey>>(
+                    future: fetchSurveysByStudentType(userData['studentType'] ??
+                        'Art'), // TODO: Bug here, studentType is null
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      } else {
+                        final List<Survey> surveys = snapshot.data!;
+                        return CarouselSlider(
+                          options: CarouselOptions(
+                              viewportFraction: 0.7,
+                              height:
+                                  MediaQuery.of(context).size.height * 0.15),
+                          items: surveys.map((survey) {
+                            return Builder(
+                              builder: (BuildContext context) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      builder: (context) =>
+                                          SurveyDetailsScreen(survey: survey),
+                                    );
+                                  },
+                                  child: Container(
+                                    height: MediaQuery.of(context).size.height *
+                                        0.1,
+                                    width:
+                                        MediaQuery.of(context).size.width * 0.5,
+                                    margin:
+                                        EdgeInsets.symmetric(horizontal: 5.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors
+                                          .white, // Change the background color to white
+                                      borderRadius: BorderRadius.circular(15.0),
+                                      border: Border.all(
+                                          color: Colors.green,
+                                          width: 2), // Add a green border
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          survey.surveyNameController.text,
+                                          style: TextStyle(
+                                              fontSize: 16.0,
+                                              fontWeight: FontWeight
+                                                  .bold), // Make the title bold
+                                        ),
+                                        SizedBox(height: 15),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          }).toList(),
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
@@ -373,6 +433,7 @@ class _AddScreenState extends State<AddScreen> {
   // Variable to track whether a new project was created
   // ignore: unused_field
   bool _projectCreated = false;
+  bool _surveyCreated = false;
 
   // This method fetches the projects created by the current user
   Future<List<Project>> fetchUserProjects(User user) async {
@@ -386,6 +447,20 @@ class _AddScreenState extends State<AddScreen> {
 
     // Map the documents to Project objects and return them as a list
     return querySnapshot.docs.map((doc) => Project.fromFirestore(doc)).toList();
+  }
+
+  // This method fetches the projects created by the current user
+  Future<List<Survey>> fetchUserSurveys(User user) async {
+    // Get a reference to the Firestore collection
+    final CollectionReference surveys =
+        FirebaseFirestore.instance.collection('surveys');
+
+    // Query the collection for projects created by the current user
+    final QuerySnapshot querySnapshot =
+        await surveys.where('Lead', isEqualTo: user.email).get();
+
+    // Map the documents to Project objects and return them as a list
+    return querySnapshot.docs.map((doc) => Survey.fromFirestore(doc)).toList();
   }
 
   @override
@@ -411,7 +486,7 @@ class _AddScreenState extends State<AddScreen> {
               future: fetchUserProjects(widget.user),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircularProgressIndicator();
+                  return Container();
                 } else if (snapshot.hasError) {
                   return Text('Error: ${snapshot.error}');
                 } else {
@@ -471,6 +546,70 @@ class _AddScreenState extends State<AddScreen> {
                 }
               },
             ),
+
+            // Display the surveys created by the current user
+            FutureBuilder<List<Survey>>(
+              future: fetchUserSurveys(widget.user),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                } else {
+                  final List<Survey> surveys = snapshot.data!;
+                  return Column(
+                    children: surveys.map((survey) {
+                      String truncatedDescription = survey
+                                  .surveyDescriptionController.text.length >
+                              50
+                          ? '${survey.surveyDescriptionController.text.substring(0, 50)}...'
+                          : survey.surveyDescriptionController.text;
+                      return GestureDetector(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (context) =>
+                                SurveyDetailsScreen(survey: survey),
+                          );
+                        },
+                        child: Card(
+                          elevation: 2,
+                          margin:
+                              EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    survey.surveyNameController.text,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Container(
+                                    height: 50,
+                                    child: Text(
+                                      truncatedDescription,
+                                      style: TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                }
+              },
+            ),
           ],
         ),
       ),
@@ -483,6 +622,7 @@ class _AddScreenState extends State<AddScreen> {
     // Listen for changes in the navigation stack
     // If a project was created, refresh the project list
     _listenForProjectCreated();
+    _listenForSurveyCreated();
   }
 
   void _listenForProjectCreated() {
@@ -494,6 +634,22 @@ class _AddScreenState extends State<AddScreen> {
           if (result == 'projectCreated') {
             setState(() {
               _projectCreated = true;
+            });
+          }
+        });
+      }
+    }
+  }
+
+  void _listenForSurveyCreated() {
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      final resultFuture = route.settings.arguments;
+      if (resultFuture != null) {
+        (resultFuture as Future).then((result) {
+          if (result == 'surveyCreated') {
+            setState(() {
+              _surveyCreated = true;
             });
           }
         });
@@ -622,7 +778,7 @@ class _AddJobPopupCard extends StatelessWidget {
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (context) => NewSurvey(),
+                                builder: (context) => NewSurvey(user: user),
                               ),
                             );
                           },
@@ -795,6 +951,154 @@ class ProjectDetailsScreen extends StatelessWidget {
                                   await firestore
                                       .collection('projects')
                                       .doc(project.PID.toString())
+                                      .delete();
+
+                                  // Pop the current screen
+                                  Navigator.of(context).pop();
+                                },
+                              )
+                            : Container(), // Render an empty container when the user is not the project lead
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Survey Card Details
+class SurveyDetailsScreen extends StatelessWidget {
+  final Survey survey;
+  final User currentUser = FirebaseAuth.instance.currentUser!;
+
+  SurveyDetailsScreen({Key? key, required this.survey}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.green,
+      body: Stack(
+        children: [
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).pop();
+            },
+            child: Container(
+              color: Colors.black.withOpacity(0.4),
+            ),
+          ),
+          Center(
+            child: Hero(
+              tag: '_heroAddJob',
+              createRectTween: (begin, end) {
+                return RectTween(begin: begin, end: end);
+              },
+              child: Material(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: AnimatedContainer(
+                  duration: Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Stack(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(height: 16),
+                          Center(
+                            child: Text(
+                              survey.surveyNameController.text,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              survey.surveyDescriptionController.text,
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: RichText(
+                              text: TextSpan(
+                                style: DefaultTextStyle.of(context).style,
+                                children: <TextSpan>[
+                                  TextSpan(
+                                    text: 'Student Type: ',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        '${survey.selectedStudentType.toString()}',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: RichText(
+                              text: TextSpan(
+                                style: DefaultTextStyle.of(context).style,
+                                children: <TextSpan>[
+                                  TextSpan(
+                                    text: 'Link: ',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
+                                  TextSpan(
+                                    text: '${survey.surveyLinkController.text}',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                        ],
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: currentUser.email == survey.lead
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.delete,
+                                  color: Colors.red, // Set the color to red
+                                ),
+                                onPressed: () async {
+                                  // Get a reference to the Firestore instance
+                                  final FirebaseFirestore firestore =
+                                      FirebaseFirestore.instance;
+
+                                  // Delete the document from the 'projects' collection
+                                  await firestore
+                                      .collection('surveys')
+                                      .doc(survey.SID.toString())
                                       .delete();
 
                                   // Pop the current screen

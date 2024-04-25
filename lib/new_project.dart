@@ -57,6 +57,8 @@ class _NewProjectState extends State<NewProject> {
 
   void checkFormCompletion() {
     if (projectDescriptionController.text.isNotEmpty &&
+        projectNameController.text.isNotEmpty &&
+        contactEmailController.text.isNotEmpty &&
         _selectedStudentType != null &&
         startTimestamp != null &&
         endTimestamp != null) {

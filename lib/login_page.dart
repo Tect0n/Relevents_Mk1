@@ -55,6 +55,15 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text,
       );
 
+      // Show success snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sign in success, logging on now...'),
+          backgroundColor: Colors.green, // Set background color to green
+          duration: Duration(seconds: 1),
+        ),
+      );
+
       // Remember user details if "Remember Me" is checked
       if (rememberMe) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
